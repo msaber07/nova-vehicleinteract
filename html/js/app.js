@@ -238,6 +238,34 @@ window.addEventListener('message', (event) => {
     state = data || { ...emptyState };
     render();
   }
+  if (action === 'patch' && data) {
+    if (data.kind === 'door') {
+      const door = (state.doors || []).find((item) => item.index === data.index);
+      if (door) door.open = data.open;
+    } else if (data.kind === 'window') {
+      const win = (state.windows || []).find((item) => item.index === data.index);
+      if (win) win.down = data.down;
+    } else if (data.kind === 'hood' && state.hood) {
+      state.hood.open = data.open;
+    } else if (data.kind === 'trunk' && state.trunk) {
+      state.trunk.open = data.open;
+    } else if (data.kind === 'engine' && state.engine) {
+      state.engine.on = data.on;
+    } else if (data.kind === 'neon' && state.neon) {
+      state.neon.on = data.on;
+    } else if (data.kind === 'seat') {
+      (state.seats || []).forEach((seat) => {
+        if (seat.index === data.index) {
+          seat.isMe = true;
+          seat.occupied = true;
+        } else if (seat.isMe) {
+          seat.isMe = false;
+          seat.occupied = false;
+        }
+      });
+    }
+    render();
+  }
   if (action === 'close') {
     closePopover();
     app.classList.add('hidden');

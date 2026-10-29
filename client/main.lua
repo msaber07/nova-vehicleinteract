@@ -2,6 +2,9 @@ local QBCore, ESX = nil, nil
 local Framework = nil
 
 local function attachFramework()
+    local now = GetGameTimer()
+    if now - frameworkCheckedAt < 5000 then return end
+    frameworkCheckedAt = now
     if GetResourceState('qb-core') == 'started' then
         QBCore = exports['qb-core']:GetCoreObject()
         Framework = 'qb'
@@ -16,6 +19,8 @@ end
 local menuOpen = false
 local windowOverride = {}
 local lastSnapshot = nil
+local layoutCache = { vehicle = 0 }
+local frameworkCheckedAt = 0
 
 
 local HOOD_DOOR = 4
@@ -142,11 +147,37 @@ local function vehicleLabel(vehicle)
     return label
 end
 
+local function layoutFor(vehicle)
+    if layoutCache.vehicle == vehicle then return layoutCache end
+    local doors, windows = {}, {}
+    for i = 0, 3 do
+        if Config.Features.doors and vehicleHasBone(vehicle, DOOR_BONES[i]) then
+            doors[#doors + 1] = i
+        end
+        if Config.Features.windows and vehicleHasBone(vehicle, WINDOW_BONES[i]) then
+            windows[#windows + 1] = i
+        end
+    end
+    local class = GetVehicleClass(vehicle)
+    layoutCache = {
+        vehicle = vehicle,
+        doors = doors,
+        windows = windows,
+        hood = Config.Features.hood and vehicleHasDoor(vehicle, HOOD_DOOR) or false,
+        trunk = Config.Features.trunk and vehicleHasDoor(vehicle, TRUNK_DOOR) or false,
+        neon = Config.Features.neon and class ~= 8 and class ~= 13 and class ~= 14 and class ~= 15 and class ~= 16 and class ~= 21,
+        name = vehicleLabel(vehicle),
+        plate = GetVehicleNumberPlateText(vehicle),
+        maxSeat = GetVehicleMaxNumberOfPassengers(vehicle) - 1,
+    }
+    return layoutCache
+end
+
 local function buildMenuData(vehicle, overrides)
     overrides = overrides or {}
     local ped = PlayerPedId()
-    local maxPassengers = GetVehicleMaxNumberOfPassengers(vehicle)
-    local maxPassengerIndex = maxPassengers - 1
+    local layout = layoutFor(vehicle)
+    local maxPassengerIndex = layout.maxSeat
 
     -- Seats
     local seats = {}
@@ -164,38 +195,32 @@ local function buildMenuData(vehicle, overrides)
 
     -- Doors
     local doors = {}
-    if Config.Features.doors then
-        for i = 0, 3 do
-            if vehicleHasBone(vehicle, DOOR_BONES[i]) then
-                doors[#doors + 1] = {
-                    index = i,
-                    label = L.doorLabels[i] or ('#' .. tostring(i)),
-                    open = isDoorOpen(vehicle, i),
-                }
-            end
-        end
+    for i = 1, #layout.doors do
+        local index = layout.doors[i]
+        doors[#doors + 1] = {
+            index = index,
+            label = L.doorLabels[index] or ('#' .. tostring(index)),
+            open = isDoorOpen(vehicle, index),
+        }
     end
 
     -- Windows
     local windows = {}
-    if Config.Features.windows then
-        for i = 0, 3 do
-            if vehicleHasBone(vehicle, WINDOW_BONES[i]) then
-                windows[#windows + 1] = {
-                    index = i,
-                    label = L.windowLabels[i] or ('#' .. tostring(i)),
-                    down = isWindowDown(vehicle, i),
-                }
-            end
-        end
+    for i = 1, #layout.windows do
+        local index = layout.windows[i]
+        windows[#windows + 1] = {
+            index = index,
+            label = L.windowLabels[index] or ('#' .. tostring(index)),
+            down = isWindowDown(vehicle, index),
+        }
     end
 
     -- Hood / Trunk
     local hood, trunk
-    if Config.Features.hood and vehicleHasDoor(vehicle, HOOD_DOOR) then
+    if layout.hood then
         hood = { open = isDoorOpen(vehicle, HOOD_DOOR), label = L.ui.hood }
     end
-    if Config.Features.trunk and vehicleHasDoor(vehicle, TRUNK_DOOR) then
+    if layout.trunk then
         trunk = { open = isDoorOpen(vehicle, TRUNK_DOOR), label = L.ui.trunk }
     end
 
@@ -209,24 +234,20 @@ local function buildMenuData(vehicle, overrides)
 
     -- Neon lights
     local neon
-    if Config.Features.neon then
-        local class = GetVehicleClass(vehicle)
-        local canHaveNeon = class ~= 8 and class ~= 13 and class ~= 14 and class ~= 15 and class ~= 16 and class ~= 21
-        if canHaveNeon then
-            local neonOn = false
-            for i = 0, 3 do
-                if IsVehicleNeonLightEnabled(vehicle, i) then
-                    neonOn = true
-                    break
-                end
+    if layout.neon then
+        local neonOn = false
+        for i = 0, 3 do
+            if IsVehicleNeonLightEnabled(vehicle, i) then
+                neonOn = true
+                break
             end
-            neon = { on = neonOn }
         end
+        neon = { on = neonOn }
     end
 
     return {
-        plate = GetVehicleNumberPlateText(vehicle),
-        vehicleName = vehicleLabel(vehicle),
+        plate = layout.plate,
+        vehicleName = layout.name,
         seats = seats,
         doors = doors,
         windows = windows,
@@ -287,7 +308,7 @@ local closeMenu
 local function startLiveSync()
     CreateThread(function()
         while menuOpen do
-            Wait(400)
+            Wait(1000)
             if not menuOpen then break end
             local vehicle = GetVehiclePedIsIn(PlayerPedId(), false)
             if vehicle == 0 then
@@ -325,9 +346,14 @@ end
 
 function closeMenu()
     menuOpen = false
+    layoutCache.vehicle = 0
     SetNuiFocus(false, false)
     SetNuiFocusKeepInput(false)
     SendNUIMessage({ action = 'close' })
+end
+
+local function patchMenu(payload)
+    SendNUIMessage({ action = 'patch', data = payload })
 end
 
 local function refreshMenu(overrides)
@@ -402,7 +428,7 @@ RegisterNUICallback('switchSeat', function(data, cb)
     ensureControl(vehicle)
     TaskWarpPedIntoVehicle(ped, vehicle, seat)
     notify(L.seatSwitched, 'success')
-    refreshMenu()
+    patchMenu({ kind = 'seat', index = seat })
     cb({ ok = true })
 end)
 
@@ -431,7 +457,7 @@ RegisterNUICallback('toggleDoor', function(data, cb)
         notify(L.doorClosed, 'primary')
     end
 
-    refreshMenu()
+    patchMenu({ kind = 'door', index = door, open = shouldOpen and true or false })
     cb({ ok = true })
 end)
 
@@ -462,7 +488,7 @@ RegisterNUICallback('toggleWindow', function(data, cb)
         notify(L.windowUp, 'primary')
     end
 
-    refreshMenu()
+    patchMenu({ kind = 'window', index = window, down = shouldRollDown and true or false })
     cb({ ok = true })
 end)
 
@@ -500,7 +526,7 @@ RegisterNUICallback('toggleHoodTrunk', function(data, cb)
         notify(which == 'hood' and L.hoodClosed or L.trunkClosed, 'primary')
     end
 
-    refreshMenu()
+    patchMenu({ kind = which, open = shouldOpen and true or false })
     cb({ ok = true })
 end)
 
@@ -532,7 +558,7 @@ RegisterNUICallback('toggleEngine', function(data, cb)
     SetVehicleEngineOn(vehicle, shouldStart, true, true)
     notify(shouldStart and L.engineOn or L.engineOff, shouldStart and 'success' or 'primary')
 
-    refreshMenu({ engineOn = shouldStart })
+    patchMenu({ kind = 'engine', on = shouldStart })
     cb({ ok = true })
 end)
 
@@ -558,7 +584,7 @@ RegisterNUICallback('toggleNeon', function(data, cb)
     end
     
     notify(shouldEnable and L.neonOn or L.neonOff, 'primary')
-    refreshMenu()
+    patchMenu({ kind = 'neon', on = shouldEnable })
     cb({ ok = true })
 end)
 
