@@ -85,10 +85,6 @@ end
 local function ensureControl(vehicle)
     if NetworkHasControlOfEntity(vehicle) then return end
     NetworkRequestControlOfEntity(vehicle)
-    local deadline = GetGameTimer() + 400
-    while not NetworkHasControlOfEntity(vehicle) and GetGameTimer() < deadline do
-        Wait(0)
-    end
 end
 
 local function hasVehicleKey(vehicle)
@@ -253,6 +249,37 @@ local function startControlBlocker()
     end)
 end
 
+local function flag(value)
+    return value and '1' or '0'
+end
+
+local function menuSignature(data)
+    local parts = {
+        data.plate or '',
+        data.engine and flag(data.engine.on) or '-',
+        data.neon and flag(data.neon.on) or '-',
+        data.hood and flag(data.hood.open) or '-',
+        data.trunk and flag(data.trunk.open) or '-',
+    }
+    if data.doors then
+        for i = 1, #data.doors do
+            parts[#parts + 1] = flag(data.doors[i].open)
+        end
+    end
+    if data.windows then
+        for i = 1, #data.windows do
+            parts[#parts + 1] = flag(data.windows[i].down)
+        end
+    end
+    if data.seats then
+        for i = 1, #data.seats do
+            local seat = data.seats[i]
+            parts[#parts + 1] = seat.isMe and 'm' or (seat.occupied and 't' or 'e')
+        end
+    end
+    return table.concat(parts)
+end
+
 local closeMenu
 
 -- While the menu is open, the vehicle status can be changed externally (e.g. with W the engine turns on automatically).
@@ -268,7 +295,7 @@ local function startLiveSync()
                 break
             end
             local data = buildMenuData(vehicle)
-            local snap = json.encode(data)
+            local snap = menuSignature(data)
             if snap ~= lastSnapshot then
                 lastSnapshot = snap
                 SendNUIMessage({ action = 'refresh', data = data })
@@ -291,7 +318,7 @@ local function openMenu()
     SetNuiFocusKeepInput(true)
     startControlBlocker()
     local data = buildMenuData(vehicle)
-    lastSnapshot = json.encode(data)
+    lastSnapshot = menuSignature(data)
     SendNUIMessage({ action = 'open', data = data, locale = L.ui })
     startLiveSync()
 end
@@ -311,7 +338,7 @@ local function refreshMenu(overrides)
         return
     end
     local data = buildMenuData(vehicle, overrides)
-    lastSnapshot = json.encode(data)
+    lastSnapshot = menuSignature(data)
     SendNUIMessage({ action = 'refresh', data = data })
 end
 
@@ -375,7 +402,6 @@ RegisterNUICallback('switchSeat', function(data, cb)
     ensureControl(vehicle)
     TaskWarpPedIntoVehicle(ped, vehicle, seat)
     notify(L.seatSwitched, 'success')
-    Wait(200)
     refreshMenu()
     cb({ ok = true })
 end)
@@ -405,7 +431,6 @@ RegisterNUICallback('toggleDoor', function(data, cb)
         notify(L.doorClosed, 'primary')
     end
 
-    Wait(150)
     refreshMenu()
     cb({ ok = true })
 end)
@@ -437,7 +462,6 @@ RegisterNUICallback('toggleWindow', function(data, cb)
         notify(L.windowUp, 'primary')
     end
 
-    Wait(150)
     refreshMenu()
     cb({ ok = true })
 end)
@@ -476,7 +500,6 @@ RegisterNUICallback('toggleHoodTrunk', function(data, cb)
         notify(which == 'hood' and L.hoodClosed or L.trunkClosed, 'primary')
     end
 
-    Wait(150)
     refreshMenu()
     cb({ ok = true })
 end)

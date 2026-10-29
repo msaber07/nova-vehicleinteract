@@ -24,15 +24,15 @@ You are inside the vehicle, so a locked door can still be opened from this menu.
 
 1. Copy the folder to `resources/[standalone]/nova-vehicleinteract`.
 2. Add `ensure nova-vehicleinteract` to `server.cfg`. Order does not matter.
-3. Restart, then sit in a vehicle and press **G** or type `/vehiclemenu`.
+3. Restart, then sit in a vehicle and press **K** or type `/vehiclemenu`.
 
-Change `Config.MenuKey` if G is already used on your server. Players can also rebind it under FiveM key binds. The bind name follows `Config.Locale`.
+G is left for the engine key used by common key scripts. Change `Config.MenuKey` if K is taken. Players can also rebind it under FiveM key binds. The bind name follows `Config.Locale`.
 
 ## Configuration
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `Config.MenuKey` | `'G'` | Key that opens the menu. |
+| `Config.MenuKey` | `'K'` | Key that opens the menu. G stays free for the engine. |
 | `Config.Command` | `'vehiclemenu'` | Chat command. |
 | `Config.Locale` | `'en'` | `'en'` or `'tr'`. |
 | `Config.Notify` | `'auto'` | `'auto'`, `'ox'`, or `'qb'`. |
@@ -81,9 +81,9 @@ Menü araçtayken açıldığı için kilitli kapı içeriden yine açılır.
 
 1. Klasörü `resources/[standalone]/nova-vehicleinteract` altına kopyala.
 2. `server.cfg` içine `ensure nova-vehicleinteract` ekle. Sıra fark etmez.
-3. Yeniden başlat. Araca bin, **G** tuşuna bas veya `/vehiclemenu` yaz.
+3. Yeniden başlat. Araca bin, **K** tuşuna bas veya `/vehiclemenu` yaz.
 
-G sunucuda doluysa `Config.MenuKey` değiştir. Oyuncu tuşu FiveM kısayollarından da değiştirebilir. Kısayol adı `Config.Locale` dilindedir.
+G, yaygın anahtar scriptlerinde motor tuşu olduğu için boş bırakıldı. K doluysa `Config.MenuKey` değiştir. Oyuncu tuşu FiveM kısayollarından da değiştirebilir.
 
 ### Exportlar
 

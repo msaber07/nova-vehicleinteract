@@ -1,7 +1,8 @@
 Config = Config or {}
 
--- The key that opens the menu (the player can also change it from FiveM key binds)
-Config.MenuKey = 'G'
+-- Opens the menu. G is the usual engine key, so the default is K.
+-- Players can change it in FiveM key binds.
+Config.MenuKey = 'K'
 
 -- Chat command. Default is English. Example: 'aracmenu'
 Config.Command = 'vehiclemenu'
