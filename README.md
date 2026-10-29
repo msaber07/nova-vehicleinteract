@@ -50,13 +50,20 @@ Other resources call these **server** exports. The client cannot grant itself a 
 exports['nova-vehicleinteract']:SetNeonInstalled(plate, true)
 exports['nova-vehicleinteract']:IsNeonInstalled(plate)
 
+-- Server only. Do not return true for every plate.
+-- true  = this plate has a purchased kit
+-- nil   = this provider does not know the plate
+-- A copied "return true" marks every vehicle as purchased.
 exports['nova-vehicleinteract']:RegisterNeonProvider(function(src, plate)
-    return true  -- this plate has a purchased kit
-    -- return nil when this provider does not know the plate
+    local owned = MyKitTable[plate]
+    if owned == nil then
+        return nil
+    end
+    return owned == true
 end)
 ```
 
-`verified` allows the toggle when any provider or `SetNeonInstalled` returns true. If none can confirm the kit, the button stays hidden.
+`verified` allows the toggle when any provider returns `true`, or when `SetNeonInstalled` has recorded that plate. `nil` does not grant a kit. If nobody confirms the plate, the button stays hidden.
 
 Standard garage props (`neonEnabled`) only store whether the lights are on. They are not used as purchase proof.
 
@@ -88,7 +95,7 @@ Menü kısa bir ikon şeridi. Motor ve neon tek tık. Koltuk, kapı, cam, kaput 
 - **Kapılar** — gerçek kapıların listesi. Motosiklette araba kapısı çıkmaz.
 - **Kaput ve bagaj** — tek ikon. Listede araçta olan parça durur.
 - **Camlar** — gerçek camların listesi. Açık veya kapalı hali araçtan okunur.
-- **Neon** — modelde neon kemiği şart. Varsayılan `verified`: sunucu satın alınmış kiti doğrulamazsa açılmaz. `free` bu kontrolü atlar. `disabled` neonu kapatır. Kemik, satın alma kanıtı değildir.
+- **Neon** — modelde neon kemiği şart. Varsayılan `verified`: sunucu satın alınmış kiti doğrulamazsa açılmaz. `free` bu kontrolü atlar. `disabled` neonu kapatır. Kemik, satın alma kanıtı değildir. Sağlayıcı örneği yukarıdaki İngilizce bölümde. Bilinmeyen plakada `nil` dönülür. Düz `return true` her aracı kitli sayar.
 - **Bildirim** — `nova-ui` açıksa o, yoksa ox_lib, yoksa framework, yoksa oyunun kendi bildirimi.
 - **Sürükleme** — adı tutup şeridi taşı. Yer hatırlanır.
 - **Sürüm kontrolü** — açılışta `version.json`, `github.com/msaber07/nova-vehicleinteract` üzerindeki `main` ile karşılaştırılır.
