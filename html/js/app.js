@@ -232,6 +232,7 @@ window.addEventListener('message', (event) => {
     openTool = null;
     app.classList.remove('hidden');
     render();
+    requestAnimationFrame(clampIntoView);
   }
   if (action === 'refresh') {
     state = data || { ...emptyState };
@@ -248,6 +249,19 @@ function resetPlace() {
   app.style.left = '50%';
   app.style.transform = 'translateX(-50%)';
   app.style.bottom = '8vh';
+}
+
+function clampIntoView() {
+  if (app.style.transform && app.style.transform !== 'none') return;
+  const rect = app.getBoundingClientRect();
+  const maxLeft = Math.max(0, window.innerWidth - rect.width);
+  const maxTop = Math.max(0, window.innerHeight - rect.height);
+  const left = Math.min(Math.max(0, rect.left), maxLeft);
+  const top = Math.min(Math.max(0, rect.top), maxTop);
+  app.style.left = left + 'px';
+  app.style.top = top + 'px';
+  app.style.bottom = 'auto';
+  app.style.transform = 'none';
 }
 
 let isDragging = false;
@@ -271,11 +285,17 @@ document.addEventListener('mousemove', (event) => {
   if (!isDragging) return;
   app.style.left = (appX + event.clientX - startX) + 'px';
   app.style.top = (appY + event.clientY - startY) + 'px';
+  clampIntoView();
 });
 
 document.addEventListener('mouseup', () => {
   if (isDragging) {
+    clampIntoView();
     localStorage.setItem('vehicleInteractPos', JSON.stringify({ left: app.style.left, top: app.style.top }));
   }
   isDragging = false;
+});
+
+window.addEventListener('resize', () => {
+  if (!app.classList.contains('hidden')) clampIntoView();
 });

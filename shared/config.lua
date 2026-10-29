@@ -30,6 +30,10 @@ Config.Features = {
 -- Only allow engine control while in the driver's seat
 Config.EngineDriverOnly = true
 
+-- If a known key script is running, the engine starts only when that script says you have the key.
+-- No key script means the driver can start the engine. This does not add a dependency.
+Config.RequireKeys = true
+
 Config.Locales = {
     tr = {
         notInVehicle = 'Araç içinde olmalısın.',
@@ -49,6 +53,7 @@ Config.Locales = {
         neonOn       = 'Neon açıldı.',
         neonOff      = 'Neon kapatıldı.',
         notDriver    = 'Sadece şoför motoru kontrol edebilir.',
+        noKeys       = 'Bu aracın anahtarı sende yok.',
         keybind      = 'Araç etkileşim menüsü',
         seatLabels   = { [-1] = 'Şoför', [0] = 'Ön yolcu', [1] = 'Arka sol', [2] = 'Arka sağ', [3] = 'Arka orta' },
         doorLabels   = { [0] = 'Ön sol', [1] = 'Ön sağ', [2] = 'Arka sol', [3] = 'Arka sağ' },
@@ -93,6 +98,7 @@ Config.Locales = {
         neonOn       = 'Neon lights turned on.',
         neonOff      = 'Neon lights turned off.',
         notDriver    = 'Only the driver can control the engine.',
+        noKeys       = 'You do not have the keys for this vehicle.',
         keybind      = 'Vehicle interaction menu',
         seatLabels   = { [-1] = 'Driver', [0] = 'Front Passenger', [1] = 'Rear Left', [2] = 'Rear Right', [3] = 'Rear Middle' },
         doorLabels   = { [0] = 'Front Left', [1] = 'Front Right', [2] = 'Rear Left', [3] = 'Rear Right' },

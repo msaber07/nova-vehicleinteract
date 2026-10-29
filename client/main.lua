@@ -14,7 +14,7 @@ local function attachFramework()
 end
 
 local menuOpen = false
-local windowStates = {}
+local windowOverride = {}
 local lastSnapshot = nil
 
 
@@ -68,18 +68,47 @@ local function notify(message, notifyType)
     end
 end
 
-local function getWindowKey(vehicle, index)
-    return GetVehicleNumberPlateText(vehicle) .. '_' .. tostring(index)
-end
-
 local function isWindowDown(vehicle, index)
-    local stored = windowStates[getWindowKey(vehicle, index)]
-    if stored ~= nil then return stored end
+    local bag = windowOverride[vehicle]
+    local entry = bag and bag[index]
+    if entry and GetGameTimer() < entry.untilAt then
+        return entry.down
+    end
     return not IsVehicleWindowIntact(vehicle, index)
 end
 
 local function setWindowState(vehicle, index, down)
-    windowStates[getWindowKey(vehicle, index)] = down and true or false
+    windowOverride[vehicle] = windowOverride[vehicle] or {}
+    windowOverride[vehicle][index] = { down = down and true or false, untilAt = GetGameTimer() + 800 }
+end
+
+local function ensureControl(vehicle)
+    if NetworkHasControlOfEntity(vehicle) then return end
+    NetworkRequestControlOfEntity(vehicle)
+    local deadline = GetGameTimer() + 400
+    while not NetworkHasControlOfEntity(vehicle) and GetGameTimer() < deadline do
+        Wait(0)
+    end
+end
+
+local function hasVehicleKey(vehicle)
+    if not Config.RequireKeys then return true end
+    local plate = (GetVehicleNumberPlateText(vehicle) or ''):gsub('%s+$', '')
+    local found = false
+
+    local function ask(resource, fn)
+        if GetResourceState(resource) ~= 'started' then return false end
+        found = true
+        local ok, result = pcall(fn)
+        return ok and result == true
+    end
+
+    if ask('nova-vehiclekeys', function() return exports['nova-vehiclekeys']:HasKeys(plate) end) then return true end
+    if ask('qb-vehiclekeys', function() return exports['qb-vehiclekeys']:HasKeys(plate) end) then return true end
+    if ask('qs-vehiclekeys', function() return exports['qs-vehiclekeys']:GetKey(plate) end) then return true end
+    if ask('wasabi_carlock', function() return exports['wasabi_carlock']:HasKey(plate) end) then return true end
+    if ask('Renewed-Vehiclekeys', function() return exports['Renewed-Vehiclekeys']:hasKey(plate) end) then return true end
+    return not found
 end
 
 local function vehicleHasBone(vehicle, bone)
@@ -325,8 +354,13 @@ RegisterNUICallback('switchSeat', function(data, cb)
     local vehicle = GetVehiclePedIsIn(ped, false)
     local seat = tonumber(data and data.seat)
 
+    if not Config.Features.seats or vehicle == 0 or seat == nil then
+        cb({ ok = false })
+        return
+    end
+
     local maxSeat = GetVehicleMaxNumberOfPassengers(vehicle) - 1
-    if vehicle == 0 or seat == nil or seat < -1 or seat > maxSeat then
+    if seat < -1 or seat > maxSeat then
         cb({ ok = false })
         return
     end
@@ -338,6 +372,7 @@ RegisterNUICallback('switchSeat', function(data, cb)
         return
     end
 
+    ensureControl(vehicle)
     TaskWarpPedIntoVehicle(ped, vehicle, seat)
     notify(L.seatSwitched, 'success')
     Wait(200)
@@ -351,11 +386,17 @@ RegisterNUICallback('toggleDoor', function(data, cb)
     local door = tonumber(data and data.door)
     local shouldOpen = data and data.open
 
+    if not Config.Features.doors then
+        cb({ ok = false })
+        return
+    end
+
     if vehicle == 0 or door == nil or door < 0 or door > 3 or not vehicleHasBone(vehicle, DOOR_BONES[door]) then
         cb({ ok = false })
         return
     end
 
+    ensureControl(vehicle)
     if shouldOpen then
         SetVehicleDoorOpen(vehicle, door, false, false)
         notify(L.doorOpened, 'primary')
@@ -375,11 +416,17 @@ RegisterNUICallback('toggleWindow', function(data, cb)
     local window = tonumber(data and data.window)
     local shouldRollDown = data and data.down
 
+    if not Config.Features.windows then
+        cb({ ok = false })
+        return
+    end
+
     if vehicle == 0 or window == nil or window < 0 or window > 3 or not vehicleHasBone(vehicle, WINDOW_BONES[window]) then
         cb({ ok = false })
         return
     end
 
+    ensureControl(vehicle)
     if shouldRollDown then
         RollDownWindow(vehicle, window)
         setWindowState(vehicle, window, true)
@@ -400,13 +447,27 @@ RegisterNUICallback('toggleHoodTrunk', function(data, cb)
     local which = data and data.which
     local shouldOpen = data and data.open
 
+    if not Config.Features.hood and which == 'hood' then
+        cb({ ok = false })
+        return
+    end
+    if not Config.Features.trunk and which == 'trunk' then
+        cb({ ok = false })
+        return
+    end
+
     if vehicle == 0 or (which ~= 'hood' and which ~= 'trunk') then
         cb({ ok = false })
         return
     end
 
     local doorIndex = which == 'hood' and HOOD_DOOR or TRUNK_DOOR
+    if not vehicleHasDoor(vehicle, doorIndex) then
+        cb({ ok = false })
+        return
+    end
 
+    ensureControl(vehicle)
     if shouldOpen then
         SetVehicleDoorOpen(vehicle, doorIndex, false, false)
         notify(which == 'hood' and L.hoodOpened or L.trunkOpened, 'primary')
@@ -425,7 +486,7 @@ RegisterNUICallback('toggleEngine', function(data, cb)
     local vehicle = GetVehiclePedIsIn(ped, false)
     local shouldStart = data and data.on and true or false
 
-    if vehicle == 0 then
+    if not Config.Features.engine or vehicle == 0 then
         cb({ ok = false })
         return
     end
@@ -437,6 +498,14 @@ RegisterNUICallback('toggleEngine', function(data, cb)
         return
     end
 
+    if shouldStart and not hasVehicleKey(vehicle) then
+        notify(L.noKeys, 'error')
+        cb({ ok = false })
+        refreshMenu()
+        return
+    end
+
+    ensureControl(vehicle)
     SetVehicleEngineOn(vehicle, shouldStart, true, true)
     notify(shouldStart and L.engineOn or L.engineOff, shouldStart and 'success' or 'primary')
 
@@ -449,11 +518,18 @@ RegisterNUICallback('toggleNeon', function(data, cb)
     local vehicle = GetVehiclePedIsIn(ped, false)
     local shouldEnable = data and data.on and true or false
 
-    if vehicle == 0 then
+    if not Config.Features.neon or vehicle == 0 then
         cb({ ok = false })
         return
     end
 
+    local class = GetVehicleClass(vehicle)
+    if class == 8 or class == 13 or class == 14 or class == 15 or class == 16 or class == 21 then
+        cb({ ok = false })
+        return
+    end
+
+    ensureControl(vehicle)
     for i = 0, 3 do
         SetVehicleNeonLightEnabled(vehicle, i, shouldEnable)
     end

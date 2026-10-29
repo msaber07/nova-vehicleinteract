@@ -15,7 +15,8 @@ The menu is a short icon bar. Engine and neon toggle with one click. Seats, door
 - **Notifications** — `nova-ui` if it is started, then ox_lib, then the framework, then the game ticker.
 - **Drag** — drag the name to move the bar. The place is remembered.
 - **Version check** — on start, `version.json` is compared with `main` on `github.com/msaber07/nova-vehicleinteract`. A newer version prints a line in the server console.
-- **Icons** — Material Design Icons, Apache-2.0.
+- **Icons** — Material Design Icons, Apache-2.0. See `THIRD-PARTY-NOTICES.md`.
+- **Keys** — if `nova-vehiclekeys`, `qb-vehiclekeys`, `qs-vehiclekeys`, `wasabi_carlock`, or `Renewed-Vehiclekeys` is running, the engine starts only when that script says you have the key. None of them is required. Turning the engine off does not ask for a key.
 
 You are inside the vehicle, so a locked door can still be opened from this menu.
 
@@ -71,7 +72,8 @@ Menü kısa bir ikon şeridi. Motor ve neon tek tık. Koltuk, kapı, cam, kaput 
 - **Bildirim** — `nova-ui` açıksa o, yoksa ox_lib, yoksa framework, yoksa oyunun kendi bildirimi.
 - **Sürükleme** — adı tutup şeridi taşı. Yer hatırlanır.
 - **Sürüm kontrolü** — açılışta `version.json`, `github.com/msaber07/nova-vehicleinteract` üzerindeki `main` ile karşılaştırılır.
-- **İkonlar** — Material Design Icons, Apache-2.0.
+- **İkonlar** — Material Design Icons, Apache-2.0. Ayrıntı `THIRD-PARTY-NOTICES.md` dosyasında.
+- **Anahtar** — `nova-vehiclekeys`, `qb-vehiclekeys`, `qs-vehiclekeys`, `wasabi_carlock` veya `Renewed-Vehiclekeys` çalışıyorsa motor yalnız anahtar varsa çalışır. Hiçbiri zorunlu değildir. Motoru kapatmak anahtar istemez.
 
 Menü araçtayken açıldığı için kilitli kapı içeriden yine açılır.
 
