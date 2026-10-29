@@ -21,6 +21,9 @@ local menuOpen = false
 local windowOverride = {}
 local lastSnapshot = nil
 local layoutCache = { vehicle = 0 }
+local neonPermittedVehicle = 0
+local neonRequest = 0
+local neonToggleWait = nil
 
 
 local HOOD_DOOR = 4
@@ -127,6 +130,13 @@ local function vehicleHasNeon(vehicle)
     return false
 end
 
+local function neonMode()
+    if Config.Features and Config.Features.neon == false then return 'disabled' end
+    local mode = Config.NeonMode or 'verified'
+    if mode ~= 'free' and mode ~= 'disabled' then return 'verified' end
+    return mode
+end
+
 local function getCurrentSeat(vehicle, ped)
     for i = -1, GetVehicleMaxNumberOfPassengers(vehicle) - 1 do
         if GetPedInVehicleSeat(vehicle, i) == ped then
@@ -175,7 +185,7 @@ local function layoutFor(vehicle)
         windows = windows,
         hood = Config.Features.hood and vehicleHasDoor(vehicle, HOOD_DOOR) or false,
         trunk = Config.Features.trunk and vehicleHasDoor(vehicle, TRUNK_DOOR) or false,
-        neon = Config.Features.neon and vehicleHasNeon(vehicle),
+        supportsNeon = Config.Features.neon ~= false and vehicleHasNeon(vehicle),
         name = vehicleLabel(vehicle),
         plate = GetVehicleNumberPlateText(vehicle),
         maxSeat = GetVehicleMaxNumberOfPassengers(vehicle) - 1,
@@ -244,7 +254,9 @@ local function buildMenuData(vehicle, overrides)
 
     -- Neon lights
     local neon
-    if layout.neon then
+    local mode = neonMode()
+    local neonAllowed = mode == 'free' or (mode == 'verified' and neonPermittedVehicle == vehicle)
+    if layout.supportsNeon and neonAllowed then
         local neonOn = false
         for i = 0, 3 do
             if IsVehicleNeonLightEnabled(vehicle, i) then
@@ -352,11 +364,16 @@ local function openMenu()
     lastSnapshot = menuSignature(data)
     SendNUIMessage({ action = 'open', data = data, locale = L.ui })
     startLiveSync()
+    if neonMode() == 'verified' and layoutFor(vehicle).supportsNeon then
+        neonRequest = neonRequest + 1
+        TriggerServerEvent('nova-vehicleinteract:server:neonAccess', NetworkGetNetworkIdFromEntity(vehicle), neonRequest)
+    end
 end
 
 function closeMenu()
     menuOpen = false
     layoutCache.vehicle = 0
+    neonPermittedVehicle = 0
     SetNuiFocus(false, false)
     SetNuiFocusKeepInput(false)
     SendNUIMessage({ action = 'close' })
@@ -572,14 +589,46 @@ RegisterNUICallback('toggleEngine', function(data, cb)
     cb({ ok = true })
 end)
 
+RegisterNetEvent('nova-vehicleinteract:client:neonAccess', function(requestId, allowed)
+    if requestId ~= neonRequest or not menuOpen then return end
+    local vehicle = GetVehiclePedIsIn(PlayerPedId(), false)
+    if vehicle == 0 then return end
+    neonPermittedVehicle = allowed and vehicle or 0
+    refreshMenu()
+end)
+
+RegisterNetEvent('nova-vehicleinteract:client:neonToggleResult', function(allowed)
+    if neonToggleWait then neonToggleWait(allowed == true) end
+end)
+
 RegisterNUICallback('toggleNeon', function(data, cb)
     local ped = PlayerPedId()
     local vehicle = GetVehiclePedIsIn(ped, false)
     local shouldEnable = data and data.on and true or false
+    local mode = neonMode()
 
-    if not Config.Features.neon or vehicle == 0 or not vehicleHasNeon(vehicle) then
+    if mode == 'disabled' or vehicle == 0 or not vehicleHasNeon(vehicle) then
         cb({ ok = false })
         return
+    end
+
+    if mode == 'verified' then
+        local finished, allowed = false, false
+        neonToggleWait = function(ok)
+            allowed = ok
+            finished = true
+        end
+        TriggerServerEvent('nova-vehicleinteract:server:neonToggle', NetworkGetNetworkIdFromEntity(vehicle), shouldEnable)
+        local deadline = GetGameTimer() + 1500
+        while not finished and GetGameTimer() < deadline do
+            Wait(50)
+        end
+        neonToggleWait = nil
+        if not allowed then
+            notify(L.noNeon, 'error')
+            cb({ ok = false })
+            return
+        end
     end
 
     ensureControl(vehicle)

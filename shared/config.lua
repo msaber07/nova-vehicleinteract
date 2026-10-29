@@ -25,8 +25,12 @@ Config.Features = {
     hood    = true,  -- Kaput
     trunk   = true,  -- Bagaj
     engine = true, -- Engine on/off
-    neon = true, -- Neon lights on/off
+    neon = true, -- Master switch. false forces NeonMode off.
 }
+
+-- verified: toggle only when a server provider confirms a purchased kit. Unknown means denied.
+-- free: any model with neon bones can toggle. disabled: no neon control.
+Config.NeonMode = 'verified'
 
 -- Only allow engine control while in the driver's seat
 Config.EngineDriverOnly = true
@@ -55,6 +59,7 @@ Config.Locales = {
         neonOff      = 'Neon kapatıldı.',
         notDriver    = 'Sadece şoför motoru kontrol edebilir.',
         noKeys       = 'Bu aracın anahtarı sende yok.',
+        noNeon       = 'Bu araçta takılı neon kiti yok.',
         keybind      = 'Araç etkileşim menüsü',
         seatLabels   = { [-1] = 'Şoför', [0] = 'Ön yolcu', [1] = 'Arka sol', [2] = 'Arka sağ', [3] = 'Arka orta' },
         doorLabels   = { [0] = 'Ön sol', [1] = 'Ön sağ', [2] = 'Arka sol', [3] = 'Arka sağ' },
@@ -100,6 +105,7 @@ Config.Locales = {
         neonOff      = 'Neon lights turned off.',
         notDriver    = 'Only the driver can control the engine.',
         noKeys       = 'You do not have the keys for this vehicle.',
+        noNeon       = 'This vehicle has no installed neon kit.',
         keybind      = 'Vehicle interaction menu',
         seatLabels   = { [-1] = 'Driver', [0] = 'Front Passenger', [1] = 'Rear Left', [2] = 'Rear Right', [3] = 'Rear Middle' },
         doorLabels   = { [0] = 'Front Left', [1] = 'Front Right', [2] = 'Rear Left', [3] = 'Rear Right' },

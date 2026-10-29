@@ -11,7 +11,7 @@ The menu is a short icon bar. Engine and neon toggle with one click. Seats, door
 - **Doors** — a list of the real doors. Bikes do not get car doors.
 - **Hood and trunk** — one icon. The list shows whichever of those parts the vehicle has.
 - **Windows** — a list of the real windows. Open or closed is read from the vehicle.
-- **Neon** — shown only when the vehicle model has a neon bone (`neon_l`, `neon_r`, `neon_f`, or `neon_b`). The button toggles those lights. It does not add neon to a model that has none.
+- **Neon** — the model must have a neon bone (`neon_l`, `neon_r`, `neon_f`, or `neon_b`). `Config.NeonMode` is `verified` by default: the lights toggle only after the server confirms a purchased kit. `free` skips that check. `disabled` removes the control. A bone is not proof of purchase.
 - **Notifications** — `nova-ui` if it is started, then ox_lib, then the framework, then the game ticker.
 - **Drag** — drag the name to move the bar. The place is remembered.
 - **Version check** — on start, `version.json` is compared with `main` on `github.com/msaber07/nova-vehicleinteract`. A newer version prints a line in the server console.
@@ -39,7 +39,26 @@ G is left for the engine key used by common key scripts. Change `Config.MenuKey`
 | `Config.UseNovaUI` | `true` | Use `nova-ui` for notifications when it is started. |
 | `Config.EngineDriverOnly` | `true` | Only the driver toggles the engine. |
 | `Config.RequireKeys` | `true` | If a known key script is running, the engine starts only with a key. No key script means the driver can start it. |
+| `Config.NeonMode` | `'verified'` | `'verified'`, `'free'`, or `'disabled'`. Verified denies neon when no server provider confirms a kit. |
 | `Config.Features.*` | `true` | `seats`, `doors`, `windows`, `hood`, `trunk`, `engine`, `neon`. |
+
+## Neon kit API
+
+Other resources call these **server** exports. The client cannot grant itself a kit.
+
+```lua
+exports['nova-vehicleinteract']:SetNeonInstalled(plate, true)
+exports['nova-vehicleinteract']:IsNeonInstalled(plate)
+
+exports['nova-vehicleinteract']:RegisterNeonProvider(function(src, plate)
+    return true  -- this plate has a purchased kit
+    -- return nil when this provider does not know the plate
+end)
+```
+
+`verified` allows the toggle when any provider or `SetNeonInstalled` returns true. If none can confirm the kit, the button stays hidden.
+
+Standard garage props (`neonEnabled`) only store whether the lights are on. They are not used as purchase proof.
 
 ## Exports
 
@@ -69,7 +88,7 @@ Menü kısa bir ikon şeridi. Motor ve neon tek tık. Koltuk, kapı, cam, kaput 
 - **Kapılar** — gerçek kapıların listesi. Motosiklette araba kapısı çıkmaz.
 - **Kaput ve bagaj** — tek ikon. Listede araçta olan parça durur.
 - **Camlar** — gerçek camların listesi. Açık veya kapalı hali araçtan okunur.
-- **Neon** — yalnız modelde neon kemiği varsa görünür (`neon_l`, `neon_r`, `neon_f`, `neon_b`). Düğme o ışıkları açar. Kemiği olmayan araca neon eklemez.
+- **Neon** — modelde neon kemiği şart. Varsayılan `verified`: sunucu satın alınmış kiti doğrulamazsa açılmaz. `free` bu kontrolü atlar. `disabled` neonu kapatır. Kemik, satın alma kanıtı değildir.
 - **Bildirim** — `nova-ui` açıksa o, yoksa ox_lib, yoksa framework, yoksa oyunun kendi bildirimi.
 - **Sürükleme** — adı tutup şeridi taşı. Yer hatırlanır.
 - **Sürüm kontrolü** — açılışta `version.json`, `github.com/msaber07/nova-vehicleinteract` üzerindeki `main` ile karşılaştırılır.
