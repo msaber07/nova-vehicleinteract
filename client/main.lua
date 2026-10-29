@@ -1,5 +1,6 @@
 local QBCore, ESX = nil, nil
 local Framework = nil
+local frameworkCheckedAt = 0
 
 local function attachFramework()
     local now = GetGameTimer()
@@ -20,7 +21,6 @@ local menuOpen = false
 local windowOverride = {}
 local lastSnapshot = nil
 local layoutCache = { vehicle = 0 }
-local frameworkCheckedAt = 0
 
 
 local HOOD_DOOR = 4
@@ -41,6 +41,8 @@ local WINDOW_BONES = {
     [2] = 'window_lr',
     [3] = 'window_rr',
 }
+
+local NEON_BONES = { 'neon_l', 'neon_r', 'neon_f', 'neon_b' }
 
 -- When the menu is open, the player can continue driving but the mouse only goes to the menu.
 -- (camera/view locked) and avoid accidentally triggering pause/fire
@@ -116,6 +118,15 @@ local function vehicleHasBone(vehicle, bone)
     return bone and GetEntityBoneIndexByName(vehicle, bone) ~= -1
 end
 
+local function vehicleHasNeon(vehicle)
+    for i = 1, #NEON_BONES do
+        if vehicleHasBone(vehicle, NEON_BONES[i]) then
+            return true
+        end
+    end
+    return false
+end
+
 local function getCurrentSeat(vehicle, ped)
     for i = -1, GetVehicleMaxNumberOfPassengers(vehicle) - 1 do
         if GetPedInVehicleSeat(vehicle, i) == ped then
@@ -158,14 +169,13 @@ local function layoutFor(vehicle)
             windows[#windows + 1] = i
         end
     end
-    local class = GetVehicleClass(vehicle)
     layoutCache = {
         vehicle = vehicle,
         doors = doors,
         windows = windows,
         hood = Config.Features.hood and vehicleHasDoor(vehicle, HOOD_DOOR) or false,
         trunk = Config.Features.trunk and vehicleHasDoor(vehicle, TRUNK_DOOR) or false,
-        neon = Config.Features.neon and class ~= 8 and class ~= 13 and class ~= 14 and class ~= 15 and class ~= 16 and class ~= 21,
+        neon = Config.Features.neon and vehicleHasNeon(vehicle),
         name = vehicleLabel(vehicle),
         plate = GetVehicleNumberPlateText(vehicle),
         maxSeat = GetVehicleMaxNumberOfPassengers(vehicle) - 1,
@@ -567,13 +577,7 @@ RegisterNUICallback('toggleNeon', function(data, cb)
     local vehicle = GetVehiclePedIsIn(ped, false)
     local shouldEnable = data and data.on and true or false
 
-    if not Config.Features.neon or vehicle == 0 then
-        cb({ ok = false })
-        return
-    end
-
-    local class = GetVehicleClass(vehicle)
-    if class == 8 or class == 13 or class == 14 or class == 15 or class == 16 or class == 21 then
+    if not Config.Features.neon or vehicle == 0 or not vehicleHasNeon(vehicle) then
         cb({ ok = false })
         return
     end

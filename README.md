@@ -11,7 +11,7 @@ The menu is a short icon bar. Engine and neon toggle with one click. Seats, door
 - **Doors** — a list of the real doors. Bikes do not get car doors.
 - **Hood and trunk** — one icon. The list shows whichever of those parts the vehicle has.
 - **Windows** — a list of the real windows. Open or closed is read from the vehicle.
-- **Neon** — an LED-strip icon on cars, vans, and trucks. Hidden on bikes, cycles, boats, aircraft, and trains. The button stays available when the lights are off.
+- **Neon** — shown only when the vehicle model has a neon bone (`neon_l`, `neon_r`, `neon_f`, or `neon_b`). The button toggles those lights. It does not add neon to a model that has none.
 - **Notifications** — `nova-ui` if it is started, then ox_lib, then the framework, then the game ticker.
 - **Drag** — drag the name to move the bar. The place is remembered.
 - **Version check** — on start, `version.json` is compared with `main` on `github.com/msaber07/nova-vehicleinteract`. A newer version prints a line in the server console.
@@ -38,6 +38,7 @@ G is left for the engine key used by common key scripts. Change `Config.MenuKey`
 | `Config.Notify` | `'auto'` | `'auto'`, `'ox'`, or `'qb'`. |
 | `Config.UseNovaUI` | `true` | Use `nova-ui` for notifications when it is started. |
 | `Config.EngineDriverOnly` | `true` | Only the driver toggles the engine. |
+| `Config.RequireKeys` | `true` | If a known key script is running, the engine starts only with a key. No key script means the driver can start it. |
 | `Config.Features.*` | `true` | `seats`, `doors`, `windows`, `hood`, `trunk`, `engine`, `neon`. |
 
 ## Exports
@@ -68,7 +69,7 @@ Menü kısa bir ikon şeridi. Motor ve neon tek tık. Koltuk, kapı, cam, kaput 
 - **Kapılar** — gerçek kapıların listesi. Motosiklette araba kapısı çıkmaz.
 - **Kaput ve bagaj** — tek ikon. Listede araçta olan parça durur.
 - **Camlar** — gerçek camların listesi. Açık veya kapalı hali araçtan okunur.
-- **Neon** — LED şerit ikonu. Araba, van ve kamyonda görünür. Motor, bisiklet, tekne, uçak ve trende gizlenir. Işıklar kapalıyken de düğme durur.
+- **Neon** — yalnız modelde neon kemiği varsa görünür (`neon_l`, `neon_r`, `neon_f`, `neon_b`). Düğme o ışıkları açar. Kemiği olmayan araca neon eklemez.
 - **Bildirim** — `nova-ui` açıksa o, yoksa ox_lib, yoksa framework, yoksa oyunun kendi bildirimi.
 - **Sürükleme** — adı tutup şeridi taşı. Yer hatırlanır.
 - **Sürüm kontrolü** — açılışta `version.json`, `github.com/msaber07/nova-vehicleinteract` üzerindeki `main` ile karşılaştırılır.
